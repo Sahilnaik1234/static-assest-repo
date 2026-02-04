@@ -6,7 +6,10 @@ on:
       - stage
     types:
       - closed
- 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   s3-sync:
     if: github.event.pull_request.merged == true
