@@ -1,0 +1,44 @@
+name: Sync Static Assets to DEV and STAGE S3
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - stage
+    types:
+      - closed
+
+jobs:
+  sync-assets:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Step 1: Configure AWS Credentials (DEV account)
+      - name: Configure AWS Credentials (DEV)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Sync to DEV S3 Bucket
+        if: github.base_ref == 'dev'
+        run: |
+          aws s3 sync public/ s3://${{ secrets.DEV_BUCKET }}/ --delete
+
+      # Step 2: Assume Role into STAGE account and sync
+      - name: Assume Role into STAGE Account
+        if: github.base_ref == 'stage'
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.STAGE_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      - name: Sync to STAGE S3 Bucket
+        if: github.base_ref == 'stage'
+        run: |
+          aws s3 sync public/ s3://${{ secrets.STAGE_BUCKET }}/ --delete
